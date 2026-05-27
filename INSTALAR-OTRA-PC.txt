@@ -1,0 +1,81 @@
+Gestor de Campanas - Instalacion en otra PC
+==========================================
+
+Este paquete NO incluye datos de tu computadora anterior (sin backups,
+sin sesion WhatsApp, sin campanas guardadas). Todo se genera limpio al instalar.
+
+Requisitos
+----------
+- Windows 10/11
+- Docker Desktop instalado y en ejecucion
+  https://www.docker.com/products/docker-desktop/
+
+Pasos
+-----
+1. Descomprimir el ZIP en una carpeta, por ejemplo:
+   C:\gestor_de_campanas
+
+2. Abrir PowerShell o CMD en esa carpeta.
+
+3. Ejecutar la instalacion automatica:
+   scripts\setup.bat
+
+   La primera vez puede tardar varios minutos (descarga imagenes Docker).
+
+4. Abrir la app:
+   http://localhost:3000
+
+5. Conectar WhatsApp (primera vez):
+   - Abrir http://localhost:2886
+   - Crear/iniciar sesion y escanear el codigo QR con WhatsApp
+
+6. Listo. Ya podes programar campanas desde http://localhost:3000
+
+URLs utiles
+-----------
+Gestor (campanas):     http://localhost:3000
+OpenWA Dashboard (QR): http://localhost:2886
+OpenWA API:            http://localhost:2785/api
+OpenWA Swagger:        http://localhost:2785/api/docs
+OpenWA Health:         http://localhost:2785/api/health
+
+Como ver el token (API key)
+---------------------------
+OpenWA genera la clave al iniciar (owa_k1_...). El worker la lee desde .env
+
+1) Automatico (recomendado):
+   npm run docker:sync-key
+   docker compose restart worker
+
+2) Ver en logs:
+   docker compose logs openwa-api | findstr owa_k1
+
+3) Ver la clave guardada:
+   type .env | findstr OPENWA_API_KEY
+
+4) Dashboard OpenWA:
+   http://localhost:2886  (seccion API Keys)
+
+Mas detalle: docs\DOCKER.md y docs\OPENWA.md
+
+Comandos utiles
+---------------
+Ver estado:     docker compose ps
+Ver logs:       npm run docker:logs
+Reiniciar todo: docker compose up -d --build
+Detener:        docker compose down
+
+Ritmo de envio
+--------------
+Configurable desde la app (panel "Ritmo de envio").
+Despues de cambiarlo: docker compose restart worker
+
+Problemas frecuentes
+--------------------
+- Docker no corre: abrir Docker Desktop y esperar a que inicie.
+- QR no aparece / sesion Failed: scripts\reset-openwa-session.bat
+- API key invalida: npm run docker:sync-key
+
+Soporte tecnico
+---------------
+Ver README.md y docs/DOCKER.md incluidos en este paquete.

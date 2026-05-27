@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env*.local
+README.md
+docs
+drizzle
+openwa-data
+*.md
+.terminals
