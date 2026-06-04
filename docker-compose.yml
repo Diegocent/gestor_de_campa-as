@@ -1,158 +1,31 @@
-name: gestor-campanas
-
-x-app-env: &app-env
-  DATABASE_URL: postgresql://campanas:campanas_secret@postgres:5432/gestor_campanas
-  REDIS_URL: redis://redis:6379
-  DEFAULT_ORG_SLUG: default
-
-x-worker-env: &worker-env
-  <<: *app-env
-  OPENWA_MODE: gateway
-  OPENWA_GATEWAY_URL: http://openwa-api:2785
-  OPENWA_API_KEY: ${OPENWA_API_KEY:-gestor-openwa-dev-key}
-  OPENWA_SESSION_ID: ${OPENWA_SESSION_ID:-gestor-campanas}
-  RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-10}
-  RATE_LIMIT_DURATION_MS: ${RATE_LIMIT_DURATION_MS:-300000}
-  RATE_LIMIT_DURATION_MINUTES: ${RATE_LIMIT_DURATION_MINUTES:-5}
-
+# Infraestructura local para desarrollo: PostgreSQL + Redis.
+# El server (apps/server) y el frontend (apps/web) se corren con npm, no en Docker.
 services:
-  # ── Infraestructura ──────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: gestor-campanas-postgres
     restart: unless-stopped
-    ports:
-      - "3069:5432"
     environment:
-      POSTGRES_USER: campanas
-      POSTGRES_PASSWORD: campanas_secret
-      POSTGRES_DB: gestor_campanas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gestor
+    ports:
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U campanas -d gestor_campanas"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: gestor-campanas-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  # ── OpenWA Gateway (WhatsApp) ─────────────────────────────────
-  openwa-api:
-    build:
-      context: .
-      dockerfile: docker/openwa/Dockerfile.api
-    container_name: gestor-openwa-api
-    restart: unless-stopped
-    ports:
-      - "2785:2785"
-    environment:
-      NODE_ENV: development
-      PORT: 2785
-      DATABASE_TYPE: sqlite
-      DATABASE_NAME: /app/data/openwa.sqlite
-      DATABASE_SYNCHRONIZE: "true"
-      ENGINE_TYPE: whatsapp-web.js
-      SESSION_DATA_PATH: /app/data/sessions
-      PUPPETEER_HEADLESS: "true"
-      PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
-      STORAGE_TYPE: local
-      STORAGE_LOCAL_PATH: /app/data/media
-      WEBHOOK_TIMEOUT: "10000"
-      WEBHOOK_MAX_RETRIES: "3"
-      QUEUE_ENABLED: "false"
-    volumes:
-      - openwa_data:/app/data
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:2785/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  openwa-dashboard:
-    build:
-      context: .
-      dockerfile: docker/openwa/Dockerfile.dashboard
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:2785}
-    container_name: gestor-openwa-dashboard
-    restart: unless-stopped
-    ports:
-      - "2886:80"
-    depends_on:
-      openwa-api:
-        condition: service_healthy
-
-  # ── Gestor de Campañas ────────────────────────────────────────
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: worker
-    container_name: gestor-campanas-migrate
-    environment:
-      <<: *app-env
-    command: ["sh", "docker/scripts/migrate.sh"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: app
-    container_name: gestor-campanas-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      <<: *app-env
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: worker
-    container_name: gestor-campanas-worker
-    restart: unless-stopped
-    environment:
-      <<: *worker-env
-    command: ["sh", "docker/scripts/wait-openwa.sh"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      openwa-api:
-        condition: service_healthy
+      - redisdata:/data
 
 volumes:
-  postgres_data:
-  redis_data:
-  openwa_data:
+  pgdata:
+  redisdata:

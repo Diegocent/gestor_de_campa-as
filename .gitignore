@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -47,3 +48,9 @@ next-env.d.ts
 # drizzle
 /backups/
 /dist/
+
+# monorepo build outputs
+packages/*/dist
+apps/*/dist
+apps/web/dist
+**/*.tsbuildinfo

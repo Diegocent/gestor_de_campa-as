@@ -1,0 +1,76 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import type { CampaignJobQueue, CampaignRepository } from "@gestor/core";
+import type { CreateCampaignService } from "../../campaigns/create-campaign.service.js";
+import { parseRecipients } from "../../campaigns/spreadsheet-stream.js";
+
+export interface CampaignRouteDeps {
+  createCampaign: CreateCampaignService;
+  campaigns: CampaignRepository;
+  queue: CampaignJobQueue;
+}
+
+const listQuery = z.object({
+  page: z.coerce.number().min(1).default(1),
+  pageSize: z.coerce.number().min(1).max(100).default(10),
+});
+
+export function registerCampaignRoutes(app: FastifyInstance, deps: CampaignRouteDeps): void {
+  const auth = { preHandler: (req: any, reply: any) => app.authenticate(req, reply) };
+
+  // Crear campaña: multipart con campos (title, messageBody, scheduledAt) + archivo.
+  app.post("/campaigns", auth, async (request, reply) => {
+    const fields: Record<string, string> = {};
+    let created = null;
+
+    for await (const part of request.parts()) {
+      if (part.type !== "file") {
+        fields[part.fieldname] = String(part.value ?? "");
+        continue;
+      }
+      if (!fields.title || !fields.messageBody) {
+        part.file.resume();
+        return reply.code(400).send({ error: "Faltan campos: title y messageBody" });
+      }
+      const scheduledAt = fields.scheduledAt ? new Date(fields.scheduledAt) : new Date();
+      created = await deps.createCampaign.create({
+        organizationId: request.agent!.organizationId,
+        title: fields.title,
+        messageBody: fields.messageBody,
+        scheduledAt,
+        recipients: parseRecipients(part.file, part.filename),
+      });
+    }
+
+    if (!created) return reply.code(400).send({ error: "Falta el archivo de destinatarios" });
+    return reply.code(201).send(created);
+  });
+
+  app.get("/campaigns", auth, async (request, reply) => {
+    const q = listQuery.safeParse(request.query);
+    if (!q.success) return reply.code(400).send({ error: "Parámetros inválidos" });
+    const result = await deps.campaigns.listCampaigns({
+      organizationId: request.agent!.organizationId,
+      page: q.data.page,
+      pageSize: q.data.pageSize,
+    });
+    return reply.send(result);
+  });
+
+  app.get("/campaigns/:id", auth, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const campaign = await deps.campaigns.getCampaign(request.agent!.organizationId, id);
+    if (!campaign) return reply.code(404).send({ error: "Campaña no encontrada" });
+    return reply.send(campaign);
+  });
+
+  app.post("/campaigns/:id/cancel", auth, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const cancelledIds = await deps.campaigns.cancelCampaign(
+      request.agent!.organizationId,
+      id
+    );
+    await deps.queue.removeJobs(cancelledIds);
+    return reply.send({ cancelled: cancelledIds.length });
+  });
+}
