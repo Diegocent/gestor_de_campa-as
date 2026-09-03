@@ -65,7 +65,11 @@ export class DrizzleCampaignRepository implements CampaignRepository {
     pageSize: number;
   }): Promise<Paginated<Campaign>> {
     const where = eq(campaigns.organizationId, input.organizationId);
-    const [{ total }] = await db.select({ total: count() }).from(campaigns).where(where);
+    const totals = await db
+      .select({ total: count() })
+      .from(campaigns)
+      .where(where);
+    const totalCount = Number(totals[0]?.total ?? 0);
     const offset = (input.page - 1) * input.pageSize;
     const rows = await db
       .select()
@@ -74,7 +78,6 @@ export class DrizzleCampaignRepository implements CampaignRepository {
       .orderBy(desc(campaigns.createdAt))
       .limit(input.pageSize)
       .offset(offset);
-    const totalCount = Number(total ?? 0);
     return {
       items: rows.map(mapCampaign),
       total: totalCount,

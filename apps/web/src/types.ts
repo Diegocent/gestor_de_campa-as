@@ -5,6 +5,23 @@ export interface Agent {
   email: string;
   name: string;
   role: "admin" | "agent";
+  isActive: boolean;
+}
+
+export interface MessageTemplate {
+  id: string;
+  organizationId: string;
+  name: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChannelSession {
+  sessionName: string;
+  channelType: string;
+  connected: boolean;
+  qr: string | null;
 }
 
 export interface Conversation {
@@ -15,6 +32,8 @@ export interface Conversation {
   lastMessageAt: string;
   lastMessagePreview: string | null;
   unreadCount: number;
+  contactName?: string | null;
+  contactPhone?: string | null;
 }
 
 export interface Message {
@@ -24,7 +43,11 @@ export interface Message {
   direction: "inbound" | "outbound";
   type: string;
   text: string | null;
+  mediaUrl?: string | null;
+  mediaMimeType?: string | null;
+  mediaFilename?: string | null;
   status: "queued" | "sent" | "delivered" | "read" | "failed";
+  sentByAgentId?: string | null;
   createdAt: string;
 }
 

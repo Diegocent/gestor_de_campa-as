@@ -16,7 +16,6 @@
     "@gestor/core": "*",
     "@fastify/cors": "^10.0.1",
     "@fastify/multipart": "^9.0.1",
-    "@open-wa/wa-automate": "^4.76.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.34.8",
     "csv-parser": "^3.0.0",

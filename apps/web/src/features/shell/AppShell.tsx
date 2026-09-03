@@ -1,10 +1,10 @@
-import { Inbox, LogOut, Megaphone, Wifi, WifiOff } from "lucide-react";
+import { Inbox, LogOut, Megaphone, Wifi, WifiOff, Smartphone, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../auth/auth-context";
 import { useSocketContext } from "../realtime/socket-context";
 
-export type AppView = "inbox" | "campaigns";
+export type AppView = "inbox" | "campaigns" | "channels" | "agents";
 
 interface Props {
   view: AppView;
@@ -12,9 +12,11 @@ interface Props {
   children: React.ReactNode;
 }
 
-const TABS: { id: AppView; label: string; icon: typeof Inbox }[] = [
+const TABS: { id: AppView; label: string; icon: typeof Inbox; adminOnly?: boolean }[] = [
   { id: "inbox", label: "Bandeja", icon: Inbox },
   { id: "campaigns", label: "Campañas", icon: Megaphone },
+  { id: "channels", label: "Canales", icon: Smartphone },
+  { id: "agents", label: "Agentes", icon: Users, adminOnly: true },
 ];
 
 export function AppShell({ view, onView, children }: Props) {
@@ -25,7 +27,7 @@ export function AppShell({ view, onView, children }: Props) {
     <div className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b bg-white px-4 py-2">
         <nav className="flex items-center gap-1">
-          {TABS.map((tab) => (
+          {TABS.filter((tab) => !tab.adminOnly || agent?.role === "admin").map((tab) => (
             <button
               key={tab.id}
               onClick={() => onView(tab.id)}

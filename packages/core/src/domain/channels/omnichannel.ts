@@ -55,6 +55,8 @@ export interface IOmnichannelMessage {
   media?: OmnichannelMedia;
   /** Epoch en milisegundos. */
   timestamp: number;
+  /** Nombre de la sesión del adaptador que recibió/envió el mensaje. */
+  sessionName?: string;
 }
 
 export type AckStatus = "sent" | "delivered" | "read" | "failed";

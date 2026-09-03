@@ -49,6 +49,12 @@ export interface Conversation {
   lastMessageAt: Date;
   lastMessagePreview: string | null;
   unreadCount: number;
+  /** Nombre de sesión del adaptador que maneja esta conversación (multi-número). */
+  channelSessionId?: string;
+  /** Nombre de agenda / pushName del contacto (si se conoce). */
+  contactName?: string | null;
+  /** Teléfono del contacto (para mostrar bajo el nombre). */
+  contactPhone?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

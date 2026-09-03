@@ -47,7 +47,10 @@ export function mapContact(row: ContactRow): Contact {
   };
 }
 
-export function mapConversation(row: ConversationRow): Conversation {
+export function mapConversation(
+  row: ConversationRow,
+  contact?: { name?: string | null; phone?: string | null }
+): Conversation {
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -59,6 +62,9 @@ export function mapConversation(row: ConversationRow): Conversation {
     lastMessageAt: row.lastMessageAt,
     lastMessagePreview: row.lastMessagePreview,
     unreadCount: row.unreadCount,
+    channelSessionId: row.channelSessionId ?? undefined,
+    contactName: contact?.name ?? null,
+    contactPhone: contact?.phone ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -11,7 +11,10 @@ export interface SendOutboundCommand {
   type: Extract<OmnichannelMessageType, "text" | "image" | "document" | "audio" | "video">;
   text?: string;
   media?: {
-    url: string;
+    /** URL pública que el gateway pueda descargar (opcional si hay base64). */
+    url?: string;
+    /** Base64 crudo (sin prefijo data:); OpenWA lo acepta nativo. */
+    base64?: string;
     mimeType?: string;
     filename?: string;
     caption?: string;
@@ -38,6 +41,7 @@ export type ChannelConnectionState =
  */
 export interface IChannelAdapter {
   readonly channelType: ChannelType;
+  readonly sessionName: string;
 
   /** Inicializa la conexión con el proveedor. */
   start(): Promise<void>;
@@ -66,7 +70,10 @@ export interface IChannelAdapter {
 /** Registro de adaptadores disponibles, indexado por tipo de canal. */
 export interface IChannelRegistry {
   register(adapter: IChannelAdapter): void;
+  unregister(sessionName: string): void;
   get(channelType: ChannelType): IChannelAdapter;
   getDefault(): IChannelAdapter;
+  getBySession(sessionName: string): IChannelAdapter | undefined;
+  getNextForNewConversation(channelType: ChannelType): IChannelAdapter | undefined;
   all(): IChannelAdapter[];
 }

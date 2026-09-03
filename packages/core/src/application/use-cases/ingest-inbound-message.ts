@@ -35,6 +35,7 @@ export class IngestInboundMessageUseCase {
       organizationId,
       contactId: contact.id,
       message,
+      channelSessionId: message.sessionName,
     });
 
     const stored = await this.messages.insertInbound(

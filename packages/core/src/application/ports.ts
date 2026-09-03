@@ -25,6 +25,16 @@ export interface ContactRepository {
     organizationId: string,
     message: IOmnichannelMessage
   ): Promise<Contact>;
+  /** Actualiza nombres desde la agenda de WhatsApp (no borra si el nuevo es vacío). */
+  upsertAgendaNames(
+    organizationId: string,
+    items: Array<{
+      externalId: string;
+      phone: string;
+      name: string | null;
+      avatarUrl?: string | null;
+    }>
+  ): Promise<void>;
 }
 
 export interface ConversationRepository {
@@ -32,6 +42,7 @@ export interface ConversationRepository {
     organizationId: string;
     contactId: string;
     message: IOmnichannelMessage;
+    channelSessionId?: string;
   }): Promise<Conversation>;
   findById(id: string): Promise<Conversation | null>;
   findByRef(organizationId: string, conversationRef: string): Promise<Conversation | null>;
@@ -66,6 +77,9 @@ export interface InboxMessageRepository {
     type: StoredMessage["type"];
     text: string | null;
     providerMessageId: string | null;
+    mediaUrl?: string | null;
+    mediaMimeType?: string | null;
+    mediaFilename?: string | null;
   }): Promise<StoredMessage>;
   updateStatusByProviderId(
     providerMessageId: string,
@@ -83,6 +97,19 @@ export interface AgentRepository {
   findByEmail(email: string): Promise<AgentWithSecret | null>;
   findById(id: string): Promise<Agent | null>;
   listByOrganization(organizationId: string): Promise<Agent[]>;
+  create(input: {
+    organizationId: string;
+    email: string;
+    name: string;
+    passwordHash: string;
+    role: Agent["role"];
+  }): Promise<Agent>;
+  update(id: string, input: {
+    name?: string;
+    role?: Agent["role"];
+    isActive?: boolean;
+    passwordHash?: string;
+  }): Promise<Agent>;
 }
 
 /** Puerto de tiempo real: el adaptador concreto (socket.io) lo implementa. */
@@ -91,6 +118,7 @@ export interface RealtimePublisher {
   emitNewMessage(organizationId: string, payload: NewMessageEvent): void;
   emitConversationUpdate(organizationId: string, payload: ConversationUpdateEvent): void;
   emitAck(organizationId: string, payload: IOmnichannelAck): void;
+  emitChannelState(organizationId: string, state: string, qr: string | null): void;
 }
 
 export interface NewMessageEvent {

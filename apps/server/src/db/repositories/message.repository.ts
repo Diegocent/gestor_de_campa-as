@@ -40,6 +40,9 @@ export class DrizzleInboxMessageRepository implements InboxMessageRepository {
     type: StoredMessage["type"];
     text: string | null;
     providerMessageId: string | null;
+    mediaUrl?: string | null;
+    mediaMimeType?: string | null;
+    mediaFilename?: string | null;
   }): Promise<StoredMessage> {
     const [row] = await db
       .insert(messages)
@@ -50,6 +53,9 @@ export class DrizzleInboxMessageRepository implements InboxMessageRepository {
         direction: "outbound",
         type: input.type,
         text: input.text,
+        mediaUrl: input.mediaUrl ?? null,
+        mediaMimeType: input.mediaMimeType ?? null,
+        mediaFilename: input.mediaFilename ?? null,
         status: input.providerMessageId ? "sent" : "queued",
         sentByAgentId: input.sentByAgentId,
       })
@@ -83,7 +89,11 @@ export class DrizzleInboxMessageRepository implements InboxMessageRepository {
   }): Promise<Paginated<StoredMessage>> {
     const where = eq(messages.conversationId, input.conversationId);
 
-    const [{ total }] = await db.select({ total: count() }).from(messages).where(where);
+    const totals = await db
+      .select({ total: count() })
+      .from(messages)
+      .where(where);
+    const totalCount = Number(totals[0]?.total ?? 0);
 
     const offset = (input.page - 1) * input.pageSize;
     const rows = await db
@@ -94,7 +104,6 @@ export class DrizzleInboxMessageRepository implements InboxMessageRepository {
       .limit(input.pageSize)
       .offset(offset);
 
-    const totalCount = Number(total ?? 0);
     // Devolvemos en orden cronológico ascendente para el render del chat.
     return {
       items: rows.map(mapMessage).reverse(),

@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gestor
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # OpenWA Gateway (dashboard + REST API) para WhatsApp
+  openwa:
+    image: rmyndharis/openwa:latest
+    restart: unless-stopped
+    ports:
+      # Dashboard/API del gateway hacia el host (ajustalo si tenés conflictos con un compose dev).
+      - "2786:2785"
+    volumes:
+      - openwadata:/app/data
+    environment:
+      API_MASTER_KEY: ${OPENWA_API_MASTER_KEY:-owa_k1_bbf0aa973b252c55638205ff44bfc73b2c637239d18fd19babb79c0bf8d2dd01}
+      AUTO_START_SESSIONS: "true"
+      CSP_UPGRADE_INSECURE_REQUESTS: "false"
+      # Permite que el gateway publique webhooks hacia el servicio `server` dentro de esta red.
+      SSRF_ALLOWED_HOSTS: "server"
+      # Baileys: sin Chromium (más estable para vincular en Docker).
+      ENGINE_TYPE: "baileys"
+      BAILEYS_AUTH_DIR: "/app/data/baileys"
+      BAILEYS_SYNC_FULL_HISTORY: "false"
+      MEDIA_DOWNLOAD_ENABLED: "true"
+
+  # Backend (Fastify)
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - apps/server/.env
+    environment:
+      NODE_ENV: production
+      # En Docker, el backend debe escuchar en 4000 dentro del contenedor.
+      PORT: "4000"
+      # OpenWA dentro del compose: http://openwa:2785
+      OPENWA_GATEWAY_URL: "http://openwa:2785"
+      # OpenWA debe poder llamar al webhook del backend por nombre de servicio.
+      OPENWA_GATEWAY_WEBHOOK_URL: "http://server:4000/webhooks/openwa"
+      # En compose, Postgres/Redis se resuelven por nombre de servicio.
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gestor"
+      REDIS_URL: "redis://redis:6379"
+      # Ajustá el origen real del frontend.
+      # Si servís el frontend con nginx en http://TU_DOMINIO,
+      # poné CORS_ORIGIN=http://TU_DOMINIO
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      openwa:
+        condition: service_started
+    ports:
+      # El frontend/nginx proxiea internamente; este mapeo es solo para debug.
+      - "4100:4000"
+
+  # Frontend (nginx: sirve SPA y proxiea /api y /socket.io)
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
+  redisdata:
+  openwadata:
+

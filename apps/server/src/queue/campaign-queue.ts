@@ -1,13 +1,12 @@
 import { Queue } from "bullmq";
-import type { Redis } from "ioredis";
 import type { CampaignJobQueue } from "@gestor/core";
 import { CAMPAIGN_QUEUE } from "./connection.js";
 
 export class BullCampaignQueue implements CampaignJobQueue {
   private readonly queue: Queue;
 
-  constructor(connection: Redis) {
-    this.queue = new Queue(CAMPAIGN_QUEUE, { connection });
+  constructor(connection: any) {
+    this.queue = new Queue(CAMPAIGN_QUEUE, { connection: connection as any });
   }
 
   async enqueueSend(input: { campaignMessageId: string; delayMs: number }): Promise<void> {

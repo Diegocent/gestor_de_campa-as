@@ -21,6 +21,10 @@ export {
   type SendAgentMessageInput,
 } from "./application/use-cases/send-agent-message.js";
 export {
+  StartConversationUseCase,
+  type StartConversationInput,
+} from "./application/use-cases/start-conversation.js";
+export {
   LoginUseCase,
   RefreshTokenUseCase,
   type AuthResult,

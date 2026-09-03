@@ -4,8 +4,17 @@ import type { Conversation, NewMessageEvent, Paginated } from "@/types";
 import { useSocketContext } from "../realtime/socket-context";
 
 function upsertAndSort(list: Conversation[], next: Conversation): Conversation[] {
-  const without = list.filter((c) => c.id !== next.id);
-  return [next, ...without].sort(
+  const prev = list.find((c) => c.id === next.id);
+  const merged: Conversation = {
+    ...next,
+    // Conservar nombre/teléfono del cliente si el evento llega sin ellos.
+    contactName: next.contactName?.trim() ? next.contactName : (prev?.contactName ?? next.contactName),
+    contactPhone: next.contactPhone?.trim()
+      ? next.contactPhone
+      : (prev?.contactPhone ?? next.contactPhone),
+  };
+  const without = list.filter((c) => c.id !== merged.id);
+  return [merged, ...without].sort(
     (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
   );
 }
@@ -49,5 +58,9 @@ export function useConversations() {
     void api(`/conversations/${id}/read`, { method: "POST" }).catch(() => undefined);
   }, []);
 
-  return { conversations, loading, connected, reload: load, markRead };
+  const patchConversation = useCallback((next: Conversation) => {
+    setConversations((prev) => upsertAndSort(prev, next));
+  }, []);
+
+  return { conversations, loading, connected, reload: load, markRead, patchConversation };
 }

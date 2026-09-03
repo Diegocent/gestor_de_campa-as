@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { useContainerHeight } from "@/hooks/useContainerHeight";
+import type { Conversation } from "@/types";
 import { QrPanel } from "../channel/QrPanel";
 import { useChannelStatus } from "../channel/useChannelStatus";
 import { ConversationList } from "./ConversationList";
 import { ChatPanel } from "./ChatPanel";
+import { NewConversationDialog } from "./NewConversationDialog";
 import { useAgents } from "./useAgents";
 import { useConversations } from "./useConversations";
 
 export function InboxPage() {
-  const { conversations, loading, markRead } = useConversations();
+  const { conversations, loading, markRead, reload, patchConversation } = useConversations();
   const channel = useChannelStatus();
   const agents = useAgents();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -24,6 +26,11 @@ export function InboxPage() {
     if (unread > 0) markRead(id);
   }
 
+  async function onCreated(conversation: Conversation) {
+    await reload();
+    setSelectedId(conversation.id);
+  }
+
   return (
     <div className="flex h-full flex-col">
       {!channel.connected && (
@@ -32,24 +39,34 @@ export function InboxPage() {
         </div>
       )}
       <div className="flex flex-1 overflow-hidden">
-        <aside ref={ref} className="w-80 border-r bg-white">
-          {loading ? (
-            <p className="p-4 text-sm text-slate-400">Cargando conversaciones...</p>
-          ) : conversations.length === 0 ? (
-            <p className="p-4 text-sm text-slate-400">Aún no hay conversaciones.</p>
-          ) : (
-            <ConversationList
-              conversations={conversations}
-              selectedId={selectedId}
-              onSelect={(c) => onSelect(c.id, c.unreadCount)}
-              height={height}
-            />
-          )}
+        <aside className="flex w-80 flex-col border-r bg-white">
+          <NewConversationDialog onCreated={(c) => void onCreated(c)} />
+          <div ref={ref} className="min-h-0 flex-1">
+            {loading ? (
+              <p className="p-4 text-sm text-slate-400">Cargando conversaciones...</p>
+            ) : conversations.length === 0 ? (
+              <p className="p-4 text-sm text-slate-400">
+                Aún no hay conversaciones. Iniciá una con el botón de arriba.
+              </p>
+            ) : (
+              <ConversationList
+                conversations={conversations}
+                agents={agents}
+                selectedId={selectedId}
+                onSelect={(c) => onSelect(c.id, c.unreadCount)}
+                height={Math.max(height, 200)}
+              />
+            )}
+          </div>
         </aside>
 
         <main className="flex flex-1 overflow-hidden">
           {selected ? (
-            <ChatPanel conversation={selected} agents={agents} />
+            <ChatPanel
+              conversation={selected}
+              agents={agents}
+              onConversationUpdate={patchConversation}
+            />
           ) : !channel.connected ? (
             <QrPanel qr={channel.qr} state={channel.state} />
           ) : (

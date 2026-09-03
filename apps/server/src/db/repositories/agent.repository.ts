@@ -23,4 +23,41 @@ export class DrizzleAgentRepository implements AgentRepository {
       .orderBy(asc(agents.name));
     return rows.map(mapAgent);
   }
+
+  async create(input: {
+    organizationId: string;
+    email: string;
+    name: string;
+    passwordHash: string;
+    role: Agent["role"];
+  }): Promise<Agent> {
+    const [row] = await db
+      .insert(agents)
+      .values({
+        organizationId: input.organizationId,
+        email: input.email,
+        name: input.name,
+        passwordHash: input.passwordHash,
+        role: input.role,
+      })
+      .returning();
+    return mapAgent(row!);
+  }
+
+  async update(
+    id: string,
+    input: {
+      name?: string;
+      role?: Agent["role"];
+      isActive?: boolean;
+      passwordHash?: string;
+    }
+  ): Promise<Agent> {
+    const [row] = await db
+      .update(agents)
+      .set({ ...input, updatedAt: new Date() })
+      .where(eq(agents.id, id))
+      .returning();
+    return mapAgent(row!);
+  }
 }

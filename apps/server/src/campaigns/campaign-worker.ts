@@ -49,7 +49,7 @@ export function startCampaignWorker(deps: {
 
   const subscriber = createRedis();
   void subscriber.subscribe(RATE_LIMIT_CONTROL_CHANNEL);
-  subscriber.on("message", (_channel, raw) => {
+  subscriber.on("message", (_channel: string, raw: string) => {
     try {
       const next = JSON.parse(raw) as RateLimit;
       if (typeof next.max === "number" && typeof next.durationMs === "number") {

@@ -93,7 +93,7 @@ export const contacts = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     channelType: channelTypeEnum("channel_type").notNull(),
     externalId: varchar("external_id", { length: 128 }).notNull(),
-    phone: varchar("phone", { length: 20 }).notNull(),
+    phone: varchar("phone", { length: 64 }).notNull(),
     name: varchar("name", { length: 255 }),
     avatarUrl: text("avatar_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -127,6 +127,7 @@ export const conversations = pgTable(
       .defaultNow(),
     lastMessagePreview: text("last_message_preview"),
     unreadCount: integer("unread_count").notNull().default(0),
+    channelSessionId: varchar("channel_session_id", { length: 128 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -212,7 +213,7 @@ export const campaignMessages = pgTable(
     campaignId: uuid("campaign_id")
       .notNull()
       .references(() => campaigns.id, { onDelete: "cascade" }),
-    phone: varchar("phone", { length: 20 }).notNull(),
+    phone: varchar("phone", { length: 64 }).notNull(),
     recipientName: varchar("recipient_name", { length: 255 }),
     messageBody: text("message_body").notNull(),
     status: campaignMessageStatusEnum("status").notNull().default("pending"),
@@ -223,6 +224,22 @@ export const campaignMessages = pgTable(
   (t) => [index("campaign_messages_campaign_idx").on(t.campaignId, t.status)]
 );
 
+// ── Plantillas de mensajes ─────────────────────────────────────
+export const messageTemplates = pgTable(
+  "message_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("templates_org_idx").on(t.organizationId)]
+);
+
 export type OrganizationRow = typeof organizations.$inferSelect;
 export type AgentRow = typeof agents.$inferSelect;
 export type ContactRow = typeof contacts.$inferSelect;
@@ -230,3 +247,4 @@ export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type CampaignRow = typeof campaigns.$inferSelect;
 export type CampaignMessageRow = typeof campaignMessages.$inferSelect;
+export type MessageTemplateRow = typeof messageTemplates.$inferSelect;

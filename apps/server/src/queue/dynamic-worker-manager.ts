@@ -1,5 +1,4 @@
 import { Worker, type Processor } from "bullmq";
-import type { Redis } from "ioredis";
 
 export interface RateLimit {
   /** Máximo de jobs procesados por ventana. */
@@ -23,7 +22,7 @@ export class DynamicRateLimitedWorker<T = unknown> {
 
   constructor(
     private readonly queueName: string,
-    private readonly connection: Redis,
+    private readonly connection: any,
     private readonly processor: Processor<T>,
     initial: RateLimit
   ) {
@@ -66,7 +65,7 @@ export class DynamicRateLimitedWorker<T = unknown> {
 
   private spawn(limit: RateLimit): Worker<T> {
     return new Worker<T>(this.queueName, this.processor, {
-      connection: this.connection,
+      connection: this.connection as any,
       concurrency: 1,
       limiter: { max: limit.max, duration: limit.durationMs },
     });

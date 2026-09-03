@@ -26,6 +26,48 @@ services:
     volumes:
       - redisdata:/data
 
+  # Gateway de WhatsApp autohospedado (https://github.com/rmyndharis/OpenWA).
+  # Servicio aparte: apps/server le habla por REST + recibe webhooks (ver
+  # apps/server/src/channels/openwa-gateway). NO es el paquete npm
+  # "@open-wa/wa-automate" (deprecado); es un proyecto distinto y activamente
+  # mantenido con el mismo nombre.
+  openwa:
+    image: rmyndharis/openwa:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:2785:2785"
+    volumes:
+      - openwadata:/app/data
+    # En Windows/Linux, fuerza IPv4 hacia el host (evita fallos intermitentes
+    # de webhooks cuando host.docker.internal resuelve solo a IPv6).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Clave fija (>=32 chars, la exige el gateway) para no tener que leerla de
+      # data/.api-key en cada boot. Debe coincidir con OPENWA_GATEWAY_API_KEY en
+      # apps/server/.env. Es una clave de desarrollo: generá una propia para
+      # producción (ver README / docs del gateway).
+      API_MASTER_KEY: ${OPENWA_API_MASTER_KEY:-owa_k1_bbf0aa973b252c55638205ff44bfc73b2c637239d18fd19babb79c0bf8d2dd01}
+      AUTO_START_SESSIONS: "true"
+      # Servimos el dashboard por HTTP plano en localhost (sin proxy TLS); sin
+      # esto el navegador intenta forzar https:// en sus scripts y queda en blanco.
+      CSP_UPGRADE_INSECURE_REQUESTS: "false"
+      # SSRF guard: por defecto el gateway rechaza webhooks hacia IPs privadas.
+      # host.docker.internal resuelve a la IP del host (donde corre apps/server),
+      # así que lo habilitamos explícitamente.
+      SSRF_ALLOWED_HOSTS: "host.docker.internal"
+      MEDIA_DOWNLOAD_ENABLED: "true"
+      # whatsapp-web.js (Chromium) estaba fallando al vincular en este entorno
+      # ("Execution context was destroyed" + perfil stale). Baileys habla el
+      # protocolo multi-device por WebSocket, sin navegador (docs OpenWA).
+      ENGINE_TYPE: "baileys"
+      BAILEYS_AUTH_DIR: "/app/data/baileys"
+      BAILEYS_SYNC_FULL_HISTORY: "false"
+      # Por si se vuelve a wwebjs: evita pin remoto roto y da más tiempo de boot.
+      WWEBJS_WEB_VERSION: "off"
+      WWEBJS_AUTH_TIMEOUT_MS: "120000"
+
 volumes:
   pgdata:
   redisdata:
+  openwadata:

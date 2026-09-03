@@ -21,7 +21,7 @@ export function QrPanel({ qr, state }: Props) {
           />
           <p className="max-w-sm text-sm text-slate-500">
             Abrí WhatsApp → Dispositivos vinculados → Vincular un dispositivo y
-            escaneá este código.
+            escaneá este código. Se renueva solo cada ~20s: usá el que ves ahora.
           </p>
         </>
       ) : (

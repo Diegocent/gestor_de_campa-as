@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, tokenStore } from "@/lib/api";
 import type { AckEvent, Message, NewMessageEvent, Paginated } from "@/types";
 import { useSocketContext } from "../realtime/socket-context";
 
 /**
  * Estado del hilo de una conversación: carga el historial y se mantiene en vivo
- * por WebSocket (mensajes nuevos + acuses de recibo). Separa la lógica de estado
- * de la presentación (MessageThread sólo renderiza).
+ * por WebSocket (mensajes nuevos + acuses de recibo).
  */
 export function useMessages(conversationId: string | null) {
   const { socket } = useSocketContext();
@@ -60,11 +59,32 @@ export function useMessages(conversationId: string | null) {
   }, [socket, conversationId]);
 
   const send = useCallback(
-    async (text: string) => {
-      if (!conversationId || !text.trim()) return;
+    async (payload: { text?: string; file?: File }) => {
+      if (!conversationId) return;
+      if (!payload.text?.trim() && !payload.file) return;
+
+      if (payload.file) {
+        const form = new FormData();
+        if (payload.text?.trim()) form.append("text", payload.text.trim());
+        form.append("file", payload.file);
+        const headers = new Headers();
+        const token = tokenStore.access;
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: "POST",
+          headers,
+          body: form,
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error((body as { error?: string }).error ?? res.statusText);
+        }
+        return;
+      }
+
       await api(`/conversations/${conversationId}/messages`, {
         method: "POST",
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: payload.text }),
       });
     },
     [conversationId]

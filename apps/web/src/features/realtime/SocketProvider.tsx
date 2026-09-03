@@ -3,7 +3,9 @@ import { io, type Socket } from "socket.io-client";
 import { tokenStore } from "@/lib/api";
 import { SocketContext } from "./socket-context";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:4000";
+// En producción normalmente servimos backend y frontend bajo el mismo host
+// (ej. con nginx). En ese caso, es mejor apuntar al mismo origen.
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? window.location.origin;
 
 /**
  * Provee UNA sola conexión WebSocket (socket.io) autenticada con el access
